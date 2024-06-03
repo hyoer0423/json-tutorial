@@ -1,6 +1,7 @@
 #include "leptjson.h"
 #include <assert.h>  /* assert() */
 #include <stdlib.h>  /* NULL, strtod() */
+#include <math.h>
 
 #define EXPECT(c, ch)       do { assert(*c->json == (ch)); c->json++; } while(0)
 
@@ -41,13 +42,76 @@ static int lept_parse_null(lept_context* c, lept_value* v) {
     v->type = LEPT_NULL;
     return LEPT_PARSE_OK;
 }
+static int  is_number(lept_context* c, int pointer){
+    if(c->json[pointer] >= '0' && c->json[pointer] <= '9'){
+        return 1;
+    }
+    return 0;
 
+}
 static int lept_parse_number(lept_context* c, lept_value* v) {
     char* end;
+    int pointer=0;
     /* \TODO validate number */
+    if (c->json[pointer] == '-'){
+        pointer ++;
+    }
+    if (c->json[pointer] == '0'){
+
+        pointer ++;
+
+        if (is_number(c,pointer) == 1){
+            return LEPT_PARSE_ROOT_NOT_SINGULAR;
+            }
+        
+        if (c->json[pointer] == '.') pointer ++;
+        
+        while(is_number(c,pointer) == 1 ){
+
+            pointer ++;
+
+        }
+
+    }
+    else if( is_number(c,pointer) == 1 ){
+        pointer ++;
+        if (c->json[pointer] == '.' ){
+            pointer++;
+            if (is_number(c,pointer) != 1){
+            return LEPT_PARSE_INVALID_VALUE;
+            }
+          
+        }
+
+        
+
+        while(is_number(c,pointer) == 1 ){
+
+            pointer ++;
+
+        }
+
+
+
+    }
+
+    if (c->json[pointer]=='e' || c->json[pointer]=='E' )   pointer ++;
+    
+
+    if ((pointer !=0 && c->json[pointer]=='+' )|| c->json[pointer]=='-')    pointer ++;
+    
+    
+    while(is_number(c,pointer) == 1 ) pointer ++;
+    
+  
     v->n = strtod(c->json, &end);
+    if(v->n ==-INFINITY|| v->n == INFINITY) return LEPT_PARSE_NUMBER_TOO_BIG;
     if (c->json == end)
         return LEPT_PARSE_INVALID_VALUE;
+    if(pointer==0)  return LEPT_PARSE_INVALID_VALUE;
+    if(c->json+pointer!=end){
+        return LEPT_PARSE_ROOT_NOT_SINGULAR;
+    }
     c->json = end;
     v->type = LEPT_NUMBER;
     return LEPT_PARSE_OK;
